@@ -46,28 +46,6 @@ These methods help isolate the effect of policy implementation from broader nati
 
 ---
 
-## Repository Structure
-
-```
-├── data/
-│   ├── raw/
-│   └── processed/
-│
-├── scripts/
-│   ├── data_cleaning.R
-│   ├── did_analysis.R
-│   ├── event_study.R
-│   └── visualization.R
-│
-├── figures/
-│
-├── output/
-│
-└── README.md
-```
-
----
-
 ## Technologies
 
 * R
