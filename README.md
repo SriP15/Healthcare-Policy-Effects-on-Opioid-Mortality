@@ -2,9 +2,9 @@
 
 ## Overview
 
-This project evaluates whether state Prescription Drug Monitoring Program (PDMP) policies were associated with changes in opioid overdose mortality rates in the United States. Because states adopted these policies at different times, the analysis uses modern causal inference techniques designed for observational policy evaluation.
+This project evaluates whether state Prescription Drug Monitoring Program (PDMP) policies were associated with changes in opioid overdose mortality rates in the United States. Because states adopted these policies at different times, the analysis uses Difference-in-Differences and event-study methods for observational policy evaluation.
 
-The project demonstrates how econometric methods can be applied to estimate policy effects when randomized controlled trials are not feasible.
+The project demonstrates how econometric methods can be used to evaluate policy effects when randomized controlled trials are not feasible, while also assessing whether the assumptions required for causal interpretation are plausible.
 
 ---
 
@@ -12,7 +12,7 @@ The project demonstrates how econometric methods can be applied to estimate poli
 
 **Did implementation of state PDMP policies reduce opioid overdose mortality?**
 
-Specifically, this project estimates the average treatment effect of PDMP adoption while accounting for differences across states and changes over time.
+Specifically, this project examines the association between PDMP adoption and opioid mortality using state and year fixed effects, while evaluating whether the identifying assumptions required for a causal interpretation are supported by the data.
 
 ---
 
@@ -23,14 +23,14 @@ The analysis was conducted in **R** using a panel dataset of U.S. states observe
 Key methods include:
 
 * Difference-in-Differences (DiD)
-* Event Study analysis
+* Event-study analysis
 * State fixed effects
 * Year fixed effects
 * Clustered standard errors
-* Parallel trends assessment
-* Directed Acyclic Graph (DAG) to motivate the causal design
+* Parallel-trends assessment
+* Directed Acyclic Graph (DAG) to motivate the causal structure
 
-These methods help isolate the effect of policy implementation from broader national trends.
+These methods account for time-invariant state differences and common national shocks, while the event-study analysis is used to assess pre-treatment trends and the plausibility of causal identification.
 
 ---
 
@@ -40,9 +40,10 @@ These methods help isolate the effect of policy implementation from broader nati
 2. Construct treatment timing indicators.
 3. Create panel data indexed by state and year.
 4. Estimate Difference-in-Differences models.
-5. Estimate dynamic treatment effects using an event study.
-6. Evaluate the parallel trends assumption.
-7. Interpret policy impacts and discuss limitations.
+5. Estimate event-study specifications around policy adoption.
+6. Evaluate pre-treatment trends and the parallel-trends assumption.
+7. Conduct robustness and sensitivity analyses.
+8. Interpret results in light of the identification assumptions and study limitations.
 
 ---
 
@@ -60,29 +61,32 @@ These methods help isolate the effect of policy implementation from broader nati
 
 * Causal inference
 * Difference-in-Differences
-* Fixed effects regression
+* Fixed-effects regression
 * Event studies
 * Policy evaluation
 * Longitudinal (panel) data analysis
 * Data visualization
 * Assumption checking
+* Sensitivity analysis
 
 ---
 
 ## Results
 
-The analysis estimates the association between PDMP adoption and opioid mortality using modern Difference-in-Differences techniques. Event study estimates are used to examine treatment dynamics before and after policy implementation and to assess whether the parallel trends assumption appears reasonable.
+The baseline Difference-in-Differences estimate is positive but statistically imprecise. Event-study estimates show evidence of differential pre-treatment trends, and estimated effects are sensitive to model specification and sample restrictions.
 
-Because policy adoption is not randomized, the estimated effects should be interpreted as observational causal estimates under the assumptions of the Difference-in-Differences framework.
+These findings raise concerns about the credibility of a causal interpretation and suggest that policy adoption may be endogenous to worsening opioid conditions. Rather than providing evidence of a clear causal effect, the analysis highlights the difficulty of identifying policy effects when treatment timing is related to evolving outcome trends.
 
 ---
 
 ## Limitations
 
-* Policy adoption may be influenced by state-specific factors.
-* Other opioid-related interventions may occur simultaneously.
-* Results rely on the validity of the parallel trends assumption.
-* Effects represent average policy impacts and may vary across states.
+* Policy adoption may be influenced by state-specific and time-varying factors.
+* Other opioid-related interventions and changes in illicit drug supply may occur simultaneously.
+* The causal interpretation relies on the validity of the parallel-trends assumption.
+* Missing mortality data are not uniformly distributed across states and time.
+* Conventional two-way fixed-effects estimators may be difficult to interpret under staggered adoption and heterogeneous treatment effects.
+* Estimated effects may vary across states, adoption cohorts, and time since policy implementation.
 
 ---
 
@@ -91,8 +95,20 @@ Because policy adoption is not randomized, the estimated effects should be inter
 * Incorporate county-level analyses.
 * Explore heterogeneous treatment effects.
 * Compare multiple policy interventions.
-* Apply staggered adoption estimators (e.g., Callaway & Sant'Anna or Sun & Abraham).
+* Apply staggered-adoption estimators such as Callaway & Sant'Anna or Sun & Abraham.
 * Conduct additional robustness and sensitivity analyses.
+* Explore alternative research designs with more credible sources of identifying variation.
+
+---
+
+## Reproducibility
+
+To reproduce the analysis:
+
+1. Clone this repository.
+2. Install the required R packages used in the analysis script.
+3. Run `OpioidMortalityDiD.R` from the repository root.
+4. The script reads the included mortality and PDMP policy datasets and reproduces the main analyses and figures.
 
 ---
 
@@ -100,9 +116,11 @@ Because policy adoption is not randomized, the estimated effects should be inter
 
 * Applied causal inference
 * Difference-in-Differences
-* Event study methodology
+* Event-study methodology
 * Policy evaluation
 * Panel data analysis
 * Statistical modeling in R
+* Data cleaning and integration
 * Data visualization
+* Assumption checking
 * Research communication
