@@ -23,27 +23,34 @@ The analysis was conducted in **R** using a panel dataset of U.S. states observe
 Key methods include:
 
 * Difference-in-Differences (DiD)
-* Event-study analysis
+* Two-way fixed-effects regression
+* Sun & Abraham staggered-adoption event study
+* Conventional event-study analysis for diagnostic comparison
 * State fixed effects
 * Year fixed effects
 * Clustered standard errors
 * Parallel-trends assessment
+* State-specific trend sensitivity analysis
+* Early-adopter sensitivity analysis
 * Directed Acyclic Graph (DAG) to motivate the causal structure
 
-These methods account for time-invariant state differences and common national shocks, while the event-study analysis is used to assess pre-treatment trends and the plausibility of causal identification.
+The baseline two-way fixed-effects models account for time-invariant state differences and common national shocks. Because PDMP policies were adopted at different times across states, the analysis also applies a Sun & Abraham staggered-adoption event-study specification to allow treatment effects to vary across adoption cohorts and relative time.
+
+Pre-treatment estimates are used to assess the plausibility of the parallel-trends assumption and identify potential threats to causal interpretation.
 
 ---
 
 ## Workflow
 
-1. Import and clean state-level mortality and policy data.
-2. Construct treatment timing indicators.
-3. Create panel data indexed by state and year.
-4. Estimate Difference-in-Differences models.
-5. Estimate event-study specifications around policy adoption.
-6. Evaluate pre-treatment trends and the parallel-trends assumption.
-7. Conduct robustness and sensitivity analyses.
-8. Interpret results in light of the identification assumptions and study limitations.
+1. Import and clean state-level mortality and PDMP policy data.
+2. Construct policy adoption years and treatment indicators.
+3. Create a state-year panel dataset.
+4. Estimate baseline two-way fixed-effects Difference-in-Differences models.
+5. Estimate a Sun & Abraham staggered-adoption event study.
+6. Compare results with a conventional TWFE event-study diagnostic.
+7. Evaluate pre-treatment trends and the parallel-trends assumption.
+8. Conduct state-specific trend and early-adopter sensitivity analyses.
+9. Interpret results in light of the identifying assumptions and study limitations.
 
 ---
 
@@ -54,6 +61,8 @@ These methods account for time-invariant state differences and common national s
 * fixest
 * ggplot2
 * dplyr
+* readxl
+* lubridate
 
 ---
 
@@ -61,10 +70,11 @@ These methods account for time-invariant state differences and common national s
 
 * Causal inference
 * Difference-in-Differences
+* Staggered treatment adoption
 * Fixed-effects regression
 * Event studies
 * Policy evaluation
-* Longitudinal (panel) data analysis
+* Longitudinal panel data analysis
 * Data visualization
 * Assumption checking
 * Sensitivity analysis
@@ -73,9 +83,11 @@ These methods account for time-invariant state differences and common national s
 
 ## Results
 
-The baseline Difference-in-Differences estimate is positive but statistically imprecise. Event-study estimates show evidence of differential pre-treatment trends, and estimated effects are sensitive to model specification and sample restrictions.
+The baseline Difference-in-Differences estimate is positive but statistically imprecise. Event-study analyses provide evidence of differential pre-treatment trends, raising concerns about the parallel-trends assumption and the credibility of a causal interpretation.
 
-These findings raise concerns about the credibility of a causal interpretation and suggest that policy adoption may be endogenous to worsening opioid conditions. Rather than providing evidence of a clear causal effect, the analysis highlights the difficulty of identifying policy effects when treatment timing is related to evolving outcome trends.
+Because treatment adoption is staggered across states, the analysis also applies a Sun & Abraham event-study specification designed to accommodate variation in treatment timing and treatment effects across cohorts. Results remain sensitive to modeling choices and sample restrictions.
+
+Overall, the analysis does not provide credible evidence of a clearly identified causal effect of PDMP adoption on illicit opioid mortality. Instead, the findings suggest that policy adoption may be related to worsening opioid conditions, highlighting the challenges of causal policy evaluation when treatment timing is endogenous to evolving outcome trends.
 
 ---
 
@@ -85,7 +97,7 @@ These findings raise concerns about the credibility of a causal interpretation a
 * Other opioid-related interventions and changes in illicit drug supply may occur simultaneously.
 * The causal interpretation relies on the validity of the parallel-trends assumption.
 * Missing mortality data are not uniformly distributed across states and time.
-* Conventional two-way fixed-effects estimators may be difficult to interpret under staggered adoption and heterogeneous treatment effects.
+* Conventional two-way fixed-effects estimates may be difficult to interpret under staggered adoption and heterogeneous treatment effects; a Sun & Abraham specification is included to partially address this concern.
 * Estimated effects may vary across states, adoption cohorts, and time since policy implementation.
 
 ---
@@ -93,9 +105,9 @@ These findings raise concerns about the credibility of a causal interpretation a
 ## Future Improvements
 
 * Incorporate county-level analyses.
-* Explore heterogeneous treatment effects.
-* Compare multiple policy interventions.
-* Apply staggered-adoption estimators such as Callaway & Sant'Anna or Sun & Abraham.
+* Explore additional sources of treatment-effect heterogeneity.
+* Compare multiple opioid-related policy interventions.
+* Compare the Sun & Abraham estimates with alternative staggered-adoption estimators such as Callaway & Sant'Anna.
 * Conduct additional robustness and sensitivity analyses.
 * Explore alternative research designs with more credible sources of identifying variation.
 
@@ -116,11 +128,12 @@ To reproduce the analysis:
 
 * Applied causal inference
 * Difference-in-Differences
-* Event-study methodology
+* Staggered-adoption event studies
 * Policy evaluation
 * Panel data analysis
 * Statistical modeling in R
 * Data cleaning and integration
 * Data visualization
 * Assumption checking
+* Sensitivity analysis
 * Research communication
