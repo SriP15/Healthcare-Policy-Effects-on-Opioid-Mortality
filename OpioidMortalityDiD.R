@@ -9,9 +9,7 @@ library(fixest)
 # lubridate: working with dates
 # fixest: fixed effects regression models, useful for DiD/event-study models
 
-# -----------------------------
 # 1. Load opioid mortality data
-# -----------------------------
 
 # Load mortality data for prescription opioid deaths.
 presc <- read.csv("prescription_opioids.csv", stringsAsFactors = FALSE)
@@ -20,9 +18,7 @@ presc <- read.csv("prescription_opioids.csv", stringsAsFactors = FALSE)
 illicit <- read.csv("illicit_opioids.csv", stringsAsFactors = FALSE)
 
 
-# ---------------------------------------
 # 2. Clean prescription opioid death data
-# ---------------------------------------
 
 # CDC WONDER-style data often contains non-numeric values such as
 # "Unreliable" or "Suppressed" when rates are not reported.
@@ -45,9 +41,7 @@ presc_clean$presc_rate <- as.numeric(gsub(",", "", presc_clean$presc_rate))
 presc_clean$Year <- as.numeric(presc_clean$Year)
 
 
-# -----------------------------------
 # 3. Clean illicit opioid death data
-# -----------------------------------
 
 # Repeat the same cleaning process for illicit opioid mortality data.
 # Rename Crude.Rate to illicit_rate so the two outcomes are distinct.
@@ -65,18 +59,26 @@ illicit_clean$illicit_rate <- as.numeric(gsub(",", "", illicit_clean$illicit_rat
 illicit_clean$Year <- as.numeric(illicit_clean$Year)
 
 
-# --------------------------------------
 # 4. Build a complete state-year panel
-# --------------------------------------
 
-# Get all unique states and years from the prescription opioid dataset.
-# These will define the full panel structure.
-all_states <- sort(unique(presc_clean$State))
-all_years  <- sort(unique(presc_clean$Year))
+# Build the panel using the union of state-year pairs observed in either
+# mortality dataset. This avoids defining the analysis frame from only one outcome.
+panel_keys <- bind_rows(
+  presc_clean %>% select(State, Year),
+  illicit_clean %>% select(State, Year)
+) %>%
+  distinct(State, Year) %>%
+  arrange(State, Year)
 
-# Create every possible State x Year combination.
-# This is useful for DiD because each state should have one row per year.
-df_panel <- expand.grid(State = all_states, Year = all_years, stringsAsFactors = FALSE) %>%
+all_states <- sort(unique(panel_keys$State))
+all_years  <- sort(unique(panel_keys$Year))
+
+# Create a complete State x Year panel over the observed state and year ranges.
+df_panel <- expand.grid(
+  State = all_states,
+  Year = all_years,
+  stringsAsFactors = FALSE
+) %>%
   arrange(State, Year)
 
 # Merge prescription and illicit opioid mortality outcomes into the panel.
@@ -86,9 +88,7 @@ df_panel <- df_panel %>%
   left_join(illicit_clean, by = c("State", "Year"))
 
 
-# --------------------------
 # 5. Check the panel quality
-# --------------------------
 
 # These checks help confirm that the panel was created correctly.
 cat("Rows:", nrow(df_panel), "\n")
@@ -104,9 +104,7 @@ cat("Missing presc:", sum(is.na(df_panel$presc_rate)), "\n")
 cat("Missing illicit:", sum(is.na(df_panel$illicit_rate)), "\n\n")
 
 
-# -------------------------------------
 # 6. Create year-level descriptive data
-# -------------------------------------
 
 # Compute average prescription and illicit opioid mortality rates by year.
 # This is used for visualizing broad national trends before modeling.
@@ -121,9 +119,7 @@ df_summary <- df_panel %>%
   )
 
 
-# -------------------------------
 # 7. Plot average mortality trends
-# -------------------------------
 
 # Set the y-axis maximum based on both outcomes.
 y_max <- max(df_summary$presc, df_summary$illicit, na.rm = TRUE)
@@ -144,18 +140,14 @@ legend("topleft",
        lty = 1, lwd = 2, bty = "n")
 
 
-# -------------------------
 # 8. Load PDMP policy data
-# -------------------------
 
 # Load the PDMP law dataset.
 # This contains policy adoption information by jurisdiction.
-pdmp <- read_excel("~/Downloads/PDMP_Laws.xlsx", sheet = "Statistical Data")
+pdmp <- read_excel("PDMP_Laws.xlsx", sheet = "Statistical Data")
 
 
-# --------------------------------------
 # 9. Create treatment adoption variable
-# --------------------------------------
 
 # PDMP_opchk indicates whether a PDMP mandate has opioid-specific provisions.
 # The goal is to identify the first year each state adopted this opioid-specific mandate.
@@ -180,9 +172,7 @@ pdmp_treatment <- pdmp %>%
   )
 
 
-# -----------------------------------------
 # 10. Merge treatment timing into the panel
-# -----------------------------------------
 
 # Merge the first treatment year into the state-year panel.
 # treated = 1 for years after adoption, and 0 before adoption.
@@ -191,13 +181,14 @@ df_main <- df_panel %>%
   left_join(pdmp_treatment, by = "State") %>%
   mutate(
     treated = ifelse(!is.na(G_i) & Year >= G_i, 1, 0),
-    event_time = ifelse(!is.na(G_i), Year - G_i, NA_real_)
+    event_time = ifelse(!is.na(G_i), Year - G_i, NA_real_),
+    # fixest::sunab() treats cohorts outside the observed time range as never treated.
+    # 10000 is safely beyond the observed calendar years in this dataset.
+    cohort = ifelse(is.na(G_i), 10000, G_i)
   )
 
 
-# -----------------------------------
 # 11. Inspect treatment timing
-# -----------------------------------
 
 # Print the first treatment year by state.
 cat("Treatment timing\n")
@@ -217,9 +208,7 @@ print(table(df_main$treated, useNA = "ifany"))
 cat("\n")
 
 
-# --------------------------------------
 # 12. Restrict to main analysis period
-# --------------------------------------
 
 # Restrict the sample to 2010 onward.
 # This is done because illicit opioid mortality data are more complete after 2010.
@@ -239,9 +228,7 @@ print(
 cat("\n")
 
 
-# -----------------------------------------------
 # 13. Descriptive treated vs control group trends
-# -----------------------------------------------
 
 # Create ever_treated indicator:
 # ever_treated = 1 if the state eventually adopts the policy.
@@ -261,9 +248,7 @@ print(
 cat("\n")
 
 
-# ---------------------------------------------
 # 14. Baseline Difference-in-Differences models
-# ---------------------------------------------
 
 # Estimate a two-way fixed effects DiD model for prescription opioid mortality.
 # State fixed effects control for time-invariant differences across states.
@@ -293,56 +278,53 @@ print(summary(model_illicit))
 cat("\n")
 
 
-# ----------------------------
-# 15. Event-study specification
-# ----------------------------
+# 15. Staggered-adoption event study (Sun & Abraham)
 
-# Estimate an event-study model for illicit opioid mortality.
-# The event_time coefficients show outcome differences in each year
-# relative to the policy adoption year.
-# ref = -1 means the year immediately before adoption is the reference period.
-# Pre-treatment coefficients are used to assess whether treated states
-# had different pre-trends before policy adoption.
-model_event_illicit <- feols(
+# Estimate an event-study model that is designed for staggered treatment adoption.
+# sunab() forms cohort-by-relative-time effects and uses never-treated / appropriate
+# comparison observations rather than relying on a conventional TWFE event-study
+# specification that can be difficult to interpret under heterogeneous treatment effects.
+model_sunab_illicit <- feols(
+  illicit_rate ~ sunab(cohort, Year, ref.p = -1) | State + Year,
+  cluster = ~State,
+  data = df_analysis
+)
+
+cat("Sun-Abraham staggered-adoption event study for illicit opioid mortality\n")
+print(summary(model_sunab_illicit))
+cat("\n")
+
+# Plot the aggregated event-time effects.
+iplot(
+  model_sunab_illicit,
+  main = "Sun-Abraham Event Study: Illicit Opioid Mortality",
+  xlab = "Years relative to treatment",
+  ylab = "Estimated effect"
+)
+
+
+# 16. Conventional TWFE event-study diagnostic
+
+# This conventional event-study specification is retained as a diagnostic
+# comparison. Because event_time is undefined for never-treated states, those
+# rows are omitted from this model. Under staggered adoption and heterogeneous
+# treatment effects, the resulting coefficients should not be interpreted as
+# clean cohort-specific causal effects.
+model_event_twfe <- feols(
   illicit_rate ~ i(event_time, ref = -1) | State + Year,
   cluster = ~State,
   data = df_analysis
 )
 
-# Plot event-study coefficients.
-iplot(model_event_illicit,
-      main = "Event Study: Illicit Opioid Mortality",
-      xlab = "Years relative to treatment",
-      ylab = "Coefficient")
-
-
-# --------------------------------
-# 16. Restricted-window event study
-# --------------------------------
-
-# Restrict event time to five years before and after policy adoption.
-# This reduces noise from very early or very late event-time periods,
-# which may contain fewer observations.
-df_restrict <- df_analysis %>%
-  filter(event_time >= -5 & event_time <= 5)
-
-# Estimate event-study model within the restricted window.
-model_event_restrict <- feols(
-  illicit_rate ~ i(event_time, ref = -1) | State + Year,
-  cluster = ~State,
-  data = df_restrict
+iplot(
+  model_event_twfe,
+  main = "Conventional TWFE Event Study: Illicit Opioid Mortality",
+  xlab = "Years relative to treatment",
+  ylab = "Coefficient"
 )
 
-# Plot restricted event-study coefficients.
-iplot(model_event_restrict,
-      main = "Restricted Event Study: Illicit Opioid Mortality",
-      xlab = "Years relative to treatment",
-      ylab = "Coefficient")
 
-
-# ------------------------------------------
 # 17. State-specific linear trend robustness
-# ------------------------------------------
 
 # Add a numeric year trend.
 # This allows each state to have its own linear time trend in the robustness model.
@@ -364,9 +346,7 @@ print(etable(model_trend_illicit))
 cat("\n")
 
 
-# ------------------------------------
 # 18. Early-adopter robustness check
-# ------------------------------------
 
 # Keep only never-treated states and states treated by 2016.
 # This robustness check focuses on earlier adopters and may reduce concerns
@@ -391,23 +371,29 @@ print(summary(model_early))
 cat("\n\n\n")
 
 
-# -----------------------------------------
 # 19. Early-adopter event-study robustness
-# -----------------------------------------
 
-# Recalculate event time in the early-adopter sample.
+# Ensure the cohort variable is defined in the restricted sample.
 df_early <- df_early %>%
-  mutate(event_time = ifelse(!is.na(G_i), Year - G_i, NA_real_))
+  mutate(
+    cohort = ifelse(is.na(G_i), 10000, G_i)
+  )
 
-# Estimate event-study model in the early-adopter sample.
+# Estimate a staggered-adoption event study in the early-adopter sample.
 event_early <- feols(
-  illicit_rate ~ i(event_time, ref = -1) | State + Year,
+  illicit_rate ~ sunab(cohort, Year, ref.p = -1) | State + Year,
   cluster = ~State,
   data = df_early
 )
 
+cat("Early-adopter Sun-Abraham event study\n")
+print(summary(event_early))
+cat("\n")
+
 # Plot early-adopter event-study coefficients.
-iplot(event_early,
-      main = "Early-Adopter Event Study: Illicit Opioid Mortality",
-      xlab = "Years relative to treatment",
-      ylab = "Coefficient")
+iplot(
+  event_early,
+  main = "Early-Adopter Sun-Abraham Event Study: Illicit Opioid Mortality",
+  xlab = "Years relative to treatment",
+  ylab = "Estimated effect"
+)
