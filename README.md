@@ -121,6 +121,7 @@ To reproduce the analysis:
 2. Install the required R packages used in the analysis script.
 3. Run `OpioidMortalityDiD.R` from the repository root.
 4. The script reads the included mortality and PDMP policy datasets and reproduces the main analyses and figures.
+5. Data: The mortality CSVs are raw exports from CDC WONDER and retain the source metadata and caveat text appended by CDC to each export; the analysis script selects and cleans the relevant state-year mortality fields before constructing the panel.
 
 ---
 
